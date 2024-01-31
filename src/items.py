@@ -51,6 +51,9 @@ class Item:
             self.category       = arr[11];
     def __repr__(self):
         return f"('{self.name}','{self.id}','{self.url}','{self.price}','{self.update}')"
+    
+    def to_str(self):
+        return f"{self.name} | {self.id} | {self.price} | {self.update}"
 
     def parse_prices(self, content: str) -> None:
         yw_db_price = [];
