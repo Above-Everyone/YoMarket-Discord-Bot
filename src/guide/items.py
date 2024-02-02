@@ -5,6 +5,11 @@ class YW_INFO_LOGS:
     approve         :str
     approved_by     :str
     timestamp       :str
+    def __init__(self, arr: list[str]):
+        self.price = arr[0]
+        self.approve = arr[1]
+        self.approved_by = arr[2]
+        self.timestamp = arr[3]
 
 
 class Item:
@@ -60,7 +65,7 @@ class Item:
         lines = content.split("\n");
 
         for line in lines:
-            if line.len > 3:
+            if len(line) > 3:
                 yw_db_price.append(YW_INFO_LOGS(line.split(",")));
 
         self.ywinfo_prices = yw_db_price
@@ -87,6 +92,12 @@ class Response:
     def __init__(self, t: ResponseType, r: list | Item | int | str):
         self.r_type = t;
         self.results = r;
+    
+    def __repr__(self):
+        return "Response()"
+    
+    def __str__(self):
+        return f"{self.r_type}\n\t=> {self.results}"
     
     def getResults(self) -> list[Item] | Item:
         if self.r_type == ResponseType.EXACT:
@@ -119,8 +130,8 @@ class Items:
         API Endpoints
     """
     _STATISTICS_ENDPOINT       = "https://api.yomarket.info/statistics";
-
     _SEARCH_ENDPOINT           = "https://api.yomarket.info/search?q=" ;
+    _SEARCH_ENDPOINT_ALT       = "http://167.114.155.204:8080/search?q=" ;
     _CHANGE_ENDPOINT           = "https://api.yomarket.info/change?id=";
     _PRICE_LOGS_ENDPOINT       = "https://api.yomarket.info/price_logs";
     _SUGGESTION_LOGS_ENDPOINT  = "https://api.yomarket.info/all_suggestion";
@@ -132,15 +143,15 @@ class Items:
         self.query = q;
 
     def searchItem(self, query: str, ip: str) -> Response:
-        api_resp = requests.get(f"{self._SEARCH_ENDPOINT}{query}").text
+        api_resp = requests.get(f"{self._SEARCH_ENDPOINT_ALT}{query}").text
 
         if api_resp == "[ X ] Error, You must enter an Item name or ID":
             return Response(ResponseType.REQ_FAILED, 0);
 
         searchErrors = ["[ X ] Error, You must enter an Item name or ID", f"[ X ] Error, No item was found for {query}"];
 
-        if api_resp in searchErrors:
-            return Response(ResponseType.NONE, 0);
+        if api_resp in searchErrors or "[ X ]" in api_resp:
+            return Response(ResponseType.NULL, 0);
 
         if "\n" not in api_resp:
             return Response(ResponseType.EXACT, Item(api_resp.replace("'", "").replace("[", "").replace("]", "").split(",")));
@@ -148,16 +159,17 @@ class Items:
         lines = api_resp.split("\n")
 
         if "\n" in api_resp:
-            if lines[1].split(",") == 4:
-                content = api_resp.replace(lines[0], "");
+            if len(lines[1].split(",")) == 4:
+                content = api_resp.replace(f"{lines[0]}", "");
 
-                item_info = lines[0].replace("[", "").replace("]", "").replace("'", "");
+                item_info = lines[0].replace("[", "").replace("]", "").replace("'", "").split(",");
 
                 item = Item(item_info);
                 item.parse_prices(content)
 
                 return Response(ResponseType.EXACT, item);
-
+            else: pass
+    
         self.found = [];
         for line in lines:
             info = line.replace("[", "").replace("]", "").replace("'", "").split(",");
@@ -171,4 +183,4 @@ class Items:
         if len(self.found) > 1:
             return Response(ResponseType.EXTRA, self.found);
 
-        return Response(ResponseType.NONE, 0)
+        return Response(ResponseType.NULL, 0)
