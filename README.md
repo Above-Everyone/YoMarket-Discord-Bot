@@ -12,5 +12,5 @@
    ```bash
    pip install py-cord
    ```
-##Contributors
+## Contributors
 1. [Vibhek Soni](https://github.com/vibheksoni)
