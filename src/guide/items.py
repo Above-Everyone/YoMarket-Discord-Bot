@@ -108,8 +108,8 @@ class Response:
         return Item()
         
     def r2str(self) -> str:
-        if self.r_type == ResponseType.NONE:
-            return "ResponseType::NONE";
+        if self.r_type == ResponseType.NULL:
+            return "ResponseType::NULL";
         if self.r_type == ResponseType.EXACT:
             return "ResponseType::EXACT";
         if self.r_type == ResponseType.EXTRA:
@@ -129,21 +129,21 @@ class Items:
     """
         API Endpoints
     """
-    _STATISTICS_ENDPOINT       = "https://api.yomarket.info/statistics";
-    _SEARCH_ENDPOINT           = "https://api.yomarket.info/search?q=" ;
-    _SEARCH_ENDPOINT_ALT       = "http://167.114.155.204:8080/search?q=" ;
-    _CHANGE_ENDPOINT           = "https://api.yomarket.info/change?id=";
-    _PRICE_LOGS_ENDPOINT       = "https://api.yomarket.info/price_logs";
-    _SUGGESTION_LOGS_ENDPOINT  = "https://api.yomarket.info/all_suggestion";
-    _SAVE_ENDPOINT             = "https://api.yomarket.info/save";
+    _STATISTICS_ENDPOINT       = "https://backup.yomarket.info/statistics";
+    _SEARCH_ENDPOINT           = "https://backup.yomarket.info/search?q=" ;
+    # _SEARCH_ENDPOINT_ALT       = "http://167.114.155.204:8080/search?q=" ;
+    _CHANGE_ENDPOINT           = "https://backup.yomarket.info/change?id=";
+    _PRICE_LOGS_ENDPOINT       = "https://backup.yomarket.info/price_logs";
+    _SUGGESTION_LOGS_ENDPOINT  = "https://backup.yomarket.info/all_suggestion";
+    _SAVE_ENDPOINT             = "https://backup.yomarket.info/save";
     Response: Response
     query: str
     
-    def __init__(self, q: str | int):
-        self.query = q;
+    def __init__(self):
+        pass
 
-    def searchItem(self, query: str, ip: str) -> Response:
-        api_resp = requests.get(f"{self._SEARCH_ENDPOINT_ALT}{query}").text
+    def searchItem(self, query: str) -> Response:
+        api_resp = requests.get(f"{self._SEARCH_ENDPOINT}{query}").text
 
         if api_resp == "[ X ] Error, You must enter an Item name or ID":
             return Response(ResponseType.REQ_FAILED, 0);
@@ -182,5 +182,22 @@ class Items:
 
         if len(self.found) > 1:
             return Response(ResponseType.EXTRA, self.found);
+
+        return Response(ResponseType.NULL, 0)
+    
+    def changePrice(self, item_id, price, ip="5.5.5.5"):
+        api_resp = requests.get(f"{self._CHANGE_ENDPOINT}{str(item_id)}", {"price": price, "ip": ip})
+
+        if not api_resp:
+            return Response(ResponseType.REQ_FAILED, 0)
+
+        if api_resp.text == "[ X ] Error, You aren't a manager to change price. Price has been suggested to admins to investigate....":
+            return Response(ResponseType.INVALID_PERM, 0)
+
+        if api_resp.text == f"[ X ] Error, failed to change price on {item_id} {price}...!":
+            return Response(ResponseType.FAILED_TO_UPDATE, 0)
+
+        if "[ + ]" in api_resp.text and "successfully" in api_resp.text:
+            return Response(ResponseType.ITEM_UPDATED, 0)
 
         return Response(ResponseType.NULL, 0)
